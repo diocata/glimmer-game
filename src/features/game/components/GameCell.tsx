@@ -1,6 +1,7 @@
 "use client";
 
 import { Box, Text } from "@chakra-ui/react";
+import StarIcon from "./StarIcon";
 import type { EvaluatedCell } from "../types";
 
 interface GameCellProps {
@@ -8,12 +9,28 @@ interface GameCellProps {
   row: number;
   col: number;
   onClick: (row: number, col: number) => void;
+  isHint?: boolean;
+  showSolution?: boolean;
+  solutionStar?: boolean;
 }
 
-export default function GameCell({ cell, row, col, onClick }: GameCellProps) {
+export default function GameCell({
+  cell,
+  row,
+  col,
+  onClick,
+  isHint,
+  showSolution,
+  solutionStar,
+}: GameCellProps) {
   const isAsteroid = cell.base === "asteroid";
   const isStar = cell.state === "star";
   const isMarker = cell.state === "marker";
+  const showOverlayStar =
+    showSolution &&
+    solutionStar &&
+    cell.base === "empty" &&
+    cell.state !== "star";
   const showGlow = cell.illuminated && cell.base === "empty";
   const hasConflict = cell.conflict;
 
@@ -23,7 +40,7 @@ export default function GameCell({ cell, row, col, onClick }: GameCellProps) {
     ? "linear-gradient(135deg, rgba(255,210,148,0.6), rgba(255,154,72,0.25))"
     : "rgba(255,255,255,0.7)";
 
-  const borderColor = hasConflict ? "#ff5c1f" : "#d9cbbc";
+  const borderColor = hasConflict ? "#ff5c1f" : isHint ? "#ffb347" : "#d9cbbc";
 
   return (
     <Box
@@ -41,7 +58,14 @@ export default function GameCell({ cell, row, col, onClick }: GameCellProps) {
       background={background}
       position="relative"
       transition="transform 150ms ease, box-shadow 150ms ease"
-      boxShadow={showGlow ? "0 0 20px rgba(255, 160, 88, 0.4)" : "none"}
+      boxShadow={
+        showGlow
+          ? "0 0 20px rgba(255, 160, 88, 0.4)"
+          : isHint
+          ? "0 0 12px rgba(255, 179, 71, 0.5)"
+          : "none"
+      }
+      aspectRatio="1 / 1"
       _hover={
         isAsteroid
           ? {}
@@ -67,15 +91,24 @@ export default function GameCell({ cell, row, col, onClick }: GameCellProps) {
       {isAsteroid && typeof cell.value !== "number" ? (
         <Box width="10px" height="10px" borderRadius="999px" background="#433227" />
       ) : null}
-      {isStar ? (
-        <Text fontSize="xl" color={hasConflict ? "#ff5c1f" : "#ffb347"}>
-          *
-        </Text>
-      ) : null}
-      {isMarker ? (
-        <Text fontSize="lg" color="#7e624c">
-          x
-        </Text>
+      {isStar || showOverlayStar || isMarker ? (
+        <Box position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center">
+          {isStar ? (
+            <StarIcon
+              size={22}
+              color={hasConflict ? "#ff5c1f" : "#ffb347"}
+              glow={hasConflict ? "rgba(255,92,31,0.6)" : "rgba(255,179,71,0.6)"}
+            />
+          ) : null}
+          {!isStar && showOverlayStar ? (
+            <StarIcon size={18} color="#ffb347" glow="rgba(255,179,71,0.3)" opacity={0.6} />
+          ) : null}
+          {isMarker ? (
+            <Text fontSize="lg" color="#7e624c">
+              x
+            </Text>
+          ) : null}
+        </Box>
       ) : null}
     </Box>
   );

@@ -17,6 +17,9 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "Glimmer",
   description: "Daily light-up logic puzzle",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

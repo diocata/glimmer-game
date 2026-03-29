@@ -1,9 +1,10 @@
 "use client";
 
 import { Box, Container, HStack, Text, VStack } from "@chakra-ui/react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { evaluateBoard } from "../logic";
 import { useGameStore } from "../store";
+import { getShareText } from "../utils/share";
 import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
 import ShareDialog from "./ShareDialog";
@@ -11,25 +12,61 @@ import ShareDialog from "./ShareDialog";
 export default function GameScreen() {
   const grid = useGameStore((state) => state.grid);
   const puzzleNumber = useGameStore((state) => state.puzzleNumber);
+  const puzzleIndex = useGameStore((state) => state.puzzleIndex);
   const hasShared = useGameStore((state) => state.hasShared);
+  const hintCooldown = useGameStore((state) => state.hintCooldown);
+  const hintCell = useGameStore((state) => state.hintCell);
+  const showSolution = useGameStore((state) => state.showSolution);
+  const solution = useGameStore((state) => state.solution);
+  const elapsedSeconds = useGameStore((state) => state.elapsedSeconds);
+  const isTimerRunning = useGameStore((state) => state.isTimerRunning);
+  const selectedDate = useGameStore((state) => state.selectedDate);
   const handleCellClick = useGameStore((state) => state.handleCellClick);
   const reset = useGameStore((state) => state.reset);
   const markShared = useGameStore((state) => state.markShared);
+  const requestHint = useGameStore((state) => state.requestHint);
+  const tickHint = useGameStore((state) => state.tickHint);
+  const toggleSolution = useGameStore((state) => state.toggleSolution);
+  const tickTimer = useGameStore((state) => state.tickTimer);
+  const stopTimer = useGameStore((state) => state.stopTimer);
+  const setDate = useGameStore((state) => state.setDate);
 
   const evaluation = useMemo(() => evaluateBoard(grid), [grid]);
 
-  const shareText = `Glimmer #${puzzleNumber}\n${grid
-    .map((row) =>
-      row
-        .map((cell) => {
-          if (cell.state === "star") return "*";
-          if (cell.state === "marker") return "x";
-          if (cell.base === "asteroid") return "#";
-          return ".";
-        })
-        .join("")
-    )
-    .join("\n")}`;
+  useEffect(() => {
+    if (hintCooldown <= 0) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      tickHint();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [hintCooldown, tickHint]);
+
+  useEffect(() => {
+    if (!isTimerRunning) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      tickTimer();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning, tickTimer]);
+
+  useEffect(() => {
+    if (evaluation.win && isTimerRunning) {
+      stopTimer();
+    }
+  }, [evaluation.win, isTimerRunning, stopTimer]);
+
+  const shareText = getShareText(grid, puzzleNumber);
+  const minutes = Math.floor(elapsedSeconds / 60);
+  const seconds = elapsedSeconds % 60;
+  const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   return (
     <Box
@@ -37,11 +74,18 @@ export default function GameScreen() {
       background="radial-gradient(circle at top, #fff7ef 0%, #f6f3ef 35%, #e8e1d8 100%)"
       padding={{ base: "24px", md: "40px" }}
     >
-      <Container maxW="1100px">
+      <Container maxW="1100px" position="relative">
         <VStack align="stretch" gap={{ base: "6", md: "10" }}>
           <GameControls
             puzzleNumber={puzzleNumber}
+            puzzleIndex={puzzleIndex}
+            selectedDate={selectedDate}
+            onDateChange={setDate}
             onReset={reset}
+            onHint={requestHint}
+            onToggleSolution={toggleSolution}
+            showSolution={showSolution}
+            hintCooldown={hintCooldown}
             allLit={evaluation.allLit}
             hasConflicts={evaluation.hasConflicts}
             constraintIssues={evaluation.constraintViolations.length}
@@ -51,8 +95,26 @@ export default function GameScreen() {
               flex="1"
               minWidth={{ base: "100%", md: "360px" }}
               maxWidth={{ base: "100%", lg: "520px" }}
+              position="relative"
             >
-              <GameBoard grid={evaluation.grid} onCellClick={handleCellClick} />
+              <Box
+                position="absolute"
+                top={{ base: "-18px", md: "-22px" }}
+                right={{ base: "2px", md: "6px" }}
+                fontSize={{ base: "sm", md: "md" }}
+                fontWeight="600"
+                color="dune.800"
+                letterSpacing="0.04em"
+              >
+                {formattedTime}
+              </Box>
+              <GameBoard
+                grid={evaluation.grid}
+                onCellClick={handleCellClick}
+                hintCell={hintCell}
+                showSolution={showSolution}
+                solution={solution}
+              />
             </Box>
             <VStack
               align="stretch"
@@ -70,10 +132,11 @@ export default function GameScreen() {
                   How to play
                 </Text>
                 <VStack align="start" gap="3" fontSize="sm" color="dune.700">
-                  <Text>Tap empty tiles to cycle between star and marker.</Text>
-                  <Text>All empty space must be lit by a star.</Text>
-                  <Text>Stars cannot see each other across rows or columns.</Text>
-                  <Text>Numbered asteroids need exactly that many adjacent stars.</Text>
+                  <Text>Place a star on empty tiles to cast light in straight lines.</Text>
+                  <Text>Every empty tile must be lit by at least one star.</Text>
+                  <Text>Stars may not see each other in the same row or column.</Text>
+                  <Text>Numbered asteroids require exactly that many adjacent stars.</Text>
+                  <Text>Plain asteroids block light but have no number requirement.</Text>
                 </VStack>
               </Box>
               <Box
@@ -87,19 +150,19 @@ export default function GameScreen() {
                 </Text>
                 <Text fontSize="sm" color="dune.700">
                   {evaluation.hasConflicts
-                    ? "Two stars are shining on each other."
+                    ? "Stars are in line of sight. Move one to break the clash."
                     : evaluation.constraintViolations.length > 0
-                    ? "Some asteroids have the wrong number of nearby stars."
+                    ? "Some numbered asteroids have the wrong star count."
                     : evaluation.allLit
-                    ? "Everything is lit. Finish by fixing constraints."
-                    : "Place stars until every empty tile is illuminated."}
+                    ? "All tiles are lit. Now satisfy every numbered asteroid."
+                    : "Keep placing stars until all empty tiles are lit."}
                 </Text>
                 <HStack marginTop="12px" gap="3" flexWrap="wrap">
                   <Text fontSize="xs" color="dune.600" textTransform="uppercase" letterSpacing="0.3em">
                     Tips
                   </Text>
                   <Text fontSize="xs" color="dune.700">
-                    Use markers to track possibilities.
+                    The timer is your score. Lower is better.
                   </Text>
                 </HStack>
               </Box>
@@ -107,6 +170,11 @@ export default function GameScreen() {
           </HStack>
         </VStack>
       </Container>
+      <Box textAlign="center" marginTop={{ base: "18px", md: "28px" }}>
+        <Text fontSize="xs" color="dune.500">
+          Created with <span aria-hidden="true">&#9829;</span> by diocata
+        </Text>
+      </Box>
       <ShareDialog open={evaluation.win && !hasShared} onClose={markShared} shareText={shareText} />
     </Box>
   );

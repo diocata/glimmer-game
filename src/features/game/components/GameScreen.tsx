@@ -4,7 +4,6 @@ import { Box, Container, HStack, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useMemo } from "react";
 import { evaluateBoard } from "../logic";
 import { useGameStore } from "../store";
-import { getShareText } from "../utils/share";
 import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
 import ShareDialog from "./ShareDialog";
@@ -63,10 +62,24 @@ export default function GameScreen() {
     }
   }, [evaluation.win, isTimerRunning, stopTimer]);
 
-  const shareText = getShareText(grid, puzzleNumber);
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  const handleSaveImage = async () => {
+    const board = document.querySelector("[data-share-board]") as HTMLElement | null;
+    if (!board) {
+      return;
+    }
+    const html2canvas = (await import("html2canvas")).default;
+    const canvas = await html2canvas(board, {
+      backgroundColor: null,
+      scale: 2,
+    });
+    const link = document.createElement("a");
+    link.download = `glimmer-${puzzleNumber}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
 
   return (
     <Box
@@ -95,26 +108,27 @@ export default function GameScreen() {
               flex="1"
               minWidth={{ base: "100%", md: "360px" }}
               maxWidth={{ base: "100%", lg: "520px" }}
-              position="relative"
             >
-              <Box
-                position="absolute"
-                top={{ base: "-18px", md: "-22px" }}
-                right={{ base: "2px", md: "6px" }}
-                fontSize={{ base: "sm", md: "md" }}
-                fontWeight="600"
-                color="dune.800"
-                letterSpacing="0.04em"
-              >
-                {formattedTime}
+              <Box position="relative" data-share-board>
+                <Box
+                  position="absolute"
+                  top={{ base: "-18px", md: "-22px" }}
+                  right={{ base: "2px", md: "6px" }}
+                  fontSize={{ base: "sm", md: "md" }}
+                  fontWeight="600"
+                  color="dune.800"
+                  letterSpacing="0.04em"
+                >
+                  {formattedTime}
+                </Box>
+                <GameBoard
+                  grid={evaluation.grid}
+                  onCellClick={handleCellClick}
+                  hintCell={hintCell}
+                  showSolution={showSolution}
+                  solution={solution}
+                />
               </Box>
-              <GameBoard
-                grid={evaluation.grid}
-                onCellClick={handleCellClick}
-                hintCell={hintCell}
-                showSolution={showSolution}
-                solution={solution}
-              />
             </Box>
             <VStack
               align="stretch"
@@ -175,7 +189,12 @@ export default function GameScreen() {
           Created with <span aria-hidden="true">&#9829;</span> by diocata
         </Text>
       </Box>
-      <ShareDialog open={evaluation.win && !hasShared} onClose={markShared} shareText={shareText} />
+      <ShareDialog
+        open={evaluation.win && !hasShared}
+        onClose={markShared}
+        elapsedTime={formattedTime}
+        onSaveImage={handleSaveImage}
+      />
     </Box>
   );
 }

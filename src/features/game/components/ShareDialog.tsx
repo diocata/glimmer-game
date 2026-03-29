@@ -11,19 +11,11 @@ import {
 interface ShareDialogProps {
   open: boolean;
   onClose: () => void;
-  shareText: string;
+  elapsedTime: string;
+  onSaveImage: () => void;
 }
 
-export default function ShareDialog({ open, onClose, shareText }: ShareDialogProps) {
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareText);
-      onClose();
-    } catch {
-      onClose();
-    }
-  };
-
+export default function ShareDialog({ open, onClose, elapsedTime, onSaveImage }: ShareDialogProps) {
   return (
     <Dialog.Root
       open={open}
@@ -36,51 +28,38 @@ export default function ShareDialog({ open, onClose, shareText }: ShareDialogPro
       <Dialog.Backdrop bg="rgba(30, 22, 18, 0.65)" />
       <Dialog.Positioner>
         <Dialog.Content
-          borderRadius="24px"
+          borderRadius="20px"
           background="white"
-          padding="28px"
-          maxWidth="420px"
+          padding="24px"
+          maxWidth="360px"
           width="100%"
-          boxShadow="0 24px 60px rgba(30, 22, 18, 0.45)"
+          boxShadow="0 18px 40px rgba(30, 22, 18, 0.35)"
         >
           <Dialog.Header>
-            <Dialog.Title fontSize="xl" fontWeight="600">
-              You solved today&apos;s Glimmer
+            <Dialog.Title fontSize="lg" fontWeight="600">
+              Puzzle complete
             </Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
-            <VStack align="start" gap="3">
-              <Text color="dune.700" fontSize="sm">
-                Share your solution with friends.
+            <VStack align="center" gap="1">
+              <Text color="dune.500" fontSize="xs" textTransform="uppercase" letterSpacing="0.3em">
+                Time
               </Text>
-              <Text
-                fontFamily="mono"
-                fontSize="sm"
-                background="dune.50"
-                padding="12px"
-                borderRadius="12px"
-                width="100%"
-              >
-                {shareText}
+              <Text color="dune.900" fontSize={{ base: "2xl", md: "3xl" }} fontWeight="600">
+                {elapsedTime}
               </Text>
             </VStack>
           </Dialog.Body>
           <Dialog.Footer>
-            <HStack gap="3" width="100%" justify="flex-end">
+            <HStack gap="2" width="100%" justify="flex-end">
+              <Button variant="outline" borderRadius="999px" onClick={onSaveImage}>
+                Save your solution
+              </Button>
               <Dialog.ActionTrigger asChild>
-                <Button variant="outline" borderRadius="999px">
-                  Close
+                <Button borderRadius="999px" background="dune.900" color="dune.50" _hover={{ background: "dune.800" }}>
+                  Done
                 </Button>
               </Dialog.ActionTrigger>
-              <Button
-                borderRadius="999px"
-                background="ember.500"
-                color="white"
-                _hover={{ background: "ember.600" }}
-                onClick={handleCopy}
-              >
-                Copy share text
-              </Button>
             </HStack>
           </Dialog.Footer>
         </Dialog.Content>

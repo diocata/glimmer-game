@@ -1,8 +1,6 @@
-import dynamic from "next/dynamic";
+"use client";
 
-const GameScreen = dynamic(() => import("@/features/game/components/GameScreen"), {
-  ssr: false,
-});
+import GameScreen from "@/features/game/components/GameScreen";
 
 export default function Home() {
   return <GameScreen />;

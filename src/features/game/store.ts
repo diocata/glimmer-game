@@ -10,6 +10,7 @@ interface GameState {
   selectedDate: Date;
   hasShared: boolean;
   hintCooldown: number;
+  solutionCooldown: number;
   hintCell: { row: number; col: number } | null;
   showSolution: boolean;
   solution: boolean[][];
@@ -21,11 +22,26 @@ interface GameState {
   requestHint: () => void;
   tickHint: () => void;
   toggleSolution: () => void;
+  tickSolutionCooldown: () => void;
+  hydrateProgress: (progress: PersistedProgress) => void;
   setDate: (date: Date) => void;
   tickTimer: () => void;
   stopTimer: () => void;
   startTimer: () => void;
 }
+
+interface PersistedProgress {
+  grid: Cell[][];
+  elapsedSeconds: number;
+  hintCooldown: number;
+  solutionCooldown: number;
+  hintCell: { row: number; col: number } | null;
+  showSolution: boolean;
+  isTimerRunning: boolean;
+}
+
+const HINT_COOLDOWN_SECONDS = 20;
+const SOLUTION_COOLDOWN_SECONDS = 60;
 
 const today = new Date();
 const todayIndex = getPuzzleIndexForDate(today);
@@ -42,6 +58,7 @@ export const useGameStore = create<GameState>((set) => ({
   selectedDate: initialDate,
   hasShared: false,
   hintCooldown: 0,
+  solutionCooldown: SOLUTION_COOLDOWN_SECONDS,
   hintCell: null,
   showSolution: false,
   solution: initialPuzzle.solution,
@@ -69,6 +86,7 @@ export const useGameStore = create<GameState>((set) => ({
         grid: createGridFromLevel(puzzle.level),
         hasShared: false,
         hintCooldown: 0,
+        solutionCooldown: state.solutionCooldown,
         hintCell: null,
         showSolution: false,
         solution: puzzle.solution,
@@ -83,23 +101,24 @@ export const useGameStore = create<GameState>((set) => ({
         return state;
       }
 
-      const emptyCells: Array<{ row: number; col: number }> = [];
+      const suggestedCells: Array<{ row: number; col: number }> = [];
       state.grid.forEach((row, rowIndex) => {
         row.forEach((cell, colIndex) => {
-          if (cell.base === "empty" && cell.state === "empty") {
-            emptyCells.push({ row: rowIndex, col: colIndex });
+          const shouldBeStar = state.solution[rowIndex]?.[colIndex] === true;
+          if (cell.base === "empty" && shouldBeStar && cell.state !== "star") {
+            suggestedCells.push({ row: rowIndex, col: colIndex });
           }
         });
       });
 
-      if (emptyCells.length === 0) {
+      if (suggestedCells.length === 0) {
         return state;
       }
 
-      const hintCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      const hintCell = suggestedCells[Math.floor(Math.random() * suggestedCells.length)];
 
       return {
-        hintCooldown: 30,
+        hintCooldown: HINT_COOLDOWN_SECONDS,
         hintCell,
         grid: updateCellState(state.grid, hintCell.row, hintCell.col, "star"),
       };
@@ -113,7 +132,44 @@ export const useGameStore = create<GameState>((set) => ({
       const nextCooldown = state.hintCooldown - 1;
       return { hintCooldown: Math.max(nextCooldown, 0) };
     }),
-  toggleSolution: () => set((state) => ({ showSolution: !state.showSolution })),
+  toggleSolution: () =>
+    set((state) => {
+      if (state.solutionCooldown > 0) {
+        return state;
+      }
+
+      return { showSolution: !state.showSolution };
+    }),
+  tickSolutionCooldown: () =>
+    set((state) => {
+      if (state.solutionCooldown <= 0) {
+        return state;
+      }
+
+      return { solutionCooldown: Math.max(state.solutionCooldown - 1, 0) };
+    }),
+  hydrateProgress: (progress) =>
+    set((state) => {
+      const sameShape =
+        progress.grid.length === state.grid.length &&
+        progress.grid.every(
+          (row, rowIndex) => row.length === state.grid[rowIndex]?.length
+        );
+
+      if (!sameShape) {
+        return state;
+      }
+
+      return {
+        grid: progress.grid,
+        elapsedSeconds: Math.max(0, Math.floor(progress.elapsedSeconds)),
+        hintCooldown: Math.max(0, Math.floor(progress.hintCooldown)),
+        solutionCooldown: Math.max(0, Math.floor(progress.solutionCooldown)),
+        hintCell: progress.hintCell,
+        showSolution: progress.showSolution,
+        isTimerRunning: progress.isTimerRunning,
+      };
+    }),
   setDate: (date) =>
     set((state) => {
       const index = getPuzzleIndexForDate(date);
@@ -129,6 +185,7 @@ export const useGameStore = create<GameState>((set) => ({
         solution: puzzle.solution,
         hasShared: false,
         hintCooldown: 0,
+        solutionCooldown: SOLUTION_COOLDOWN_SECONDS,
         hintCell: null,
         showSolution: false,
         elapsedSeconds: 0,

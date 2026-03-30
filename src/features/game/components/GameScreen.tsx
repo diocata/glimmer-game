@@ -1,16 +1,30 @@
 "use client";
 
 import { Box, Button, Container, HStack, Text, VStack } from "@chakra-ui/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { evaluateBoard } from "../logic";
 import { getPuzzleDifficulty } from "../puzzles";
 import { useGameStore } from "../store";
+import type { Cell } from "../types";
 import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
 import RulesDialog from "./RulesDialog";
 import ShareDialog from "./ShareDialog";
 
 const RULES_SEEN_STORAGE_KEY = "glimmer-rules-seen-v1";
+const PROGRESS_STORAGE_KEY = "glimmer-progress-v1";
+
+interface SavedProgress {
+  grid: Cell[][];
+  elapsedSeconds: number;
+  hintCooldown: number;
+  solutionCooldown: number;
+  hintCell: { row: number; col: number } | null;
+  showSolution: boolean;
+  isTimerRunning: boolean;
+}
+
+type SavedProgressByPuzzle = Record<string, SavedProgress>;
 
 export default function GameScreen() {
   const grid = useGameStore((state) => state.grid);
@@ -18,6 +32,7 @@ export default function GameScreen() {
   const puzzleIndex = useGameStore((state) => state.puzzleIndex);
   const hasShared = useGameStore((state) => state.hasShared);
   const hintCooldown = useGameStore((state) => state.hintCooldown);
+  const solutionCooldown = useGameStore((state) => state.solutionCooldown);
   const hintCell = useGameStore((state) => state.hintCell);
   const showSolution = useGameStore((state) => state.showSolution);
   const solution = useGameStore((state) => state.solution);
@@ -29,15 +44,18 @@ export default function GameScreen() {
   const markShared = useGameStore((state) => state.markShared);
   const requestHint = useGameStore((state) => state.requestHint);
   const tickHint = useGameStore((state) => state.tickHint);
+  const tickSolutionCooldown = useGameStore((state) => state.tickSolutionCooldown);
+  const hydrateProgress = useGameStore((state) => state.hydrateProgress);
   const toggleSolution = useGameStore((state) => state.toggleSolution);
   const tickTimer = useGameStore((state) => state.tickTimer);
   const stopTimer = useGameStore((state) => state.stopTimer);
   const startTimer = useGameStore((state) => state.startTimer);
   const setDate = useGameStore((state) => state.setDate);
   const [showRulesDialog, setShowRulesDialog] = useState(false);
+  const progressHydratedPuzzleRef = useRef<number | null>(null);
 
-  const evaluation = useMemo(() => evaluateBoard(grid), [grid]);
   const puzzleDifficulty = getPuzzleDifficulty(puzzleIndex);
+  const evaluation = useMemo(() => evaluateBoard(grid), [grid]);
   const difficultyBadge =
     puzzleDifficulty === "easy"
       ? {
@@ -73,6 +91,18 @@ export default function GameScreen() {
   }, [hintCooldown, tickHint]);
 
   useEffect(() => {
+    if (solutionCooldown <= 0 || !isTimerRunning) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      tickSolutionCooldown();
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isTimerRunning, solutionCooldown, tickSolutionCooldown]);
+
+  useEffect(() => {
     if (!isTimerRunning) {
       return undefined;
     }
@@ -104,6 +134,93 @@ export default function GameScreen() {
     stopTimer();
     setShowRulesDialog(true);
   }, [startTimer, stopTimer]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!raw) {
+      progressHydratedPuzzleRef.current = puzzleIndex;
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as SavedProgressByPuzzle;
+      if (!parsed || typeof parsed !== "object") {
+        window.localStorage.removeItem(PROGRESS_STORAGE_KEY);
+        progressHydratedPuzzleRef.current = puzzleIndex;
+        return;
+      }
+
+      const saved = parsed[String(puzzleIndex)];
+      if (!saved) {
+        progressHydratedPuzzleRef.current = puzzleIndex;
+        return;
+      }
+
+      hydrateProgress({
+        grid: saved.grid,
+        elapsedSeconds: saved.elapsedSeconds,
+        hintCooldown: saved.hintCooldown,
+        solutionCooldown: saved.solutionCooldown,
+        hintCell: saved.hintCell,
+        showSolution: saved.showSolution,
+        isTimerRunning: saved.isTimerRunning,
+      });
+    } catch {
+      window.localStorage.removeItem(PROGRESS_STORAGE_KEY);
+    } finally {
+      progressHydratedPuzzleRef.current = puzzleIndex;
+    }
+  }, [hydrateProgress, puzzleIndex]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (progressHydratedPuzzleRef.current !== puzzleIndex) {
+      return;
+    }
+
+    const payload: SavedProgress = {
+      grid,
+      elapsedSeconds,
+      hintCooldown,
+      solutionCooldown,
+      hintCell,
+      showSolution,
+      isTimerRunning,
+    };
+
+    let savedByPuzzle: SavedProgressByPuzzle = {};
+    const raw = window.localStorage.getItem(PROGRESS_STORAGE_KEY);
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as SavedProgressByPuzzle;
+        if (parsed && typeof parsed === "object") {
+          savedByPuzzle = parsed;
+        }
+      } catch {
+        savedByPuzzle = {};
+      }
+    }
+
+    savedByPuzzle[String(puzzleIndex)] = payload;
+    window.localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(savedByPuzzle));
+  }, [
+    elapsedSeconds,
+    grid,
+    hintCell,
+    hintCooldown,
+    isTimerRunning,
+    puzzleIndex,
+    showSolution,
+    solutionCooldown,
+  ]);
 
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
@@ -152,6 +269,7 @@ export default function GameScreen() {
             onToggleSolution={toggleSolution}
             showSolution={showSolution}
             hintCooldown={hintCooldown}
+            solutionCooldown={solutionCooldown}
             allLit={evaluation.allLit}
             hasConflicts={evaluation.hasConflicts}
             constraintIssues={evaluation.constraintViolations.length}
@@ -222,7 +340,7 @@ export default function GameScreen() {
                 <VStack align="start" gap="3" fontSize="13px" color="dune.700">
                   <Text>
                     <Box as="span" fontWeight="600" color="dune.800">
-                      Goal: 
+                      Goal:{" "}
                     </Box>
                     Light every empty tile.
                   </Text>
@@ -231,7 +349,10 @@ export default function GameScreen() {
                   </Text>
                   <Text>Stars light straight lines until an asteroid blocks the beam.</Text>
                   <Text>Two stars cannot see each other in the same row or column.</Text>
-                  <Text>Numbered asteroids need exactly that many adjacent stars.</Text>
+                  <Text>
+                    Numbered asteroids need exactly that many adjacent stars
+                    (up/right/down/left only, no diagonals).
+                  </Text>
                 </VStack>
                 <Button
                   marginTop="14px"
@@ -287,7 +408,10 @@ export default function GameScreen() {
         elapsedTime={formattedTime}
         onSaveImage={handleSaveImage}
       />
-      <RulesDialog open={showRulesDialog} onClose={handleRulesDialogClose} />
+      <RulesDialog
+        open={showRulesDialog}
+        onClose={handleRulesDialogClose}
+      />
     </Box>
   );
 }

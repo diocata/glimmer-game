@@ -18,43 +18,54 @@ interface DemoStep {
 }
 
 const DEMO_LAYOUT = [
-  [".", ".", ".", ".", ".", ".", "."],
-  [".", "1", ".", ".", ".", "#", "."],
-  [".", ".", ".", "2", ".", ".", "."],
-  ["#", ".", ".", ".", ".", "1", "."],
-  [".", ".", ".", "#", ".", ".", "."],
-  [".", "0", ".", ".", ".", ".", "."],
-  [".", ".", ".", ".", "1", ".", "."],
+  [".", ".", ".", ".", "."],
+  [".", "2", ".", "1", "."],
+  [".", ".", ".", ".", "."],
+  [".", "1", ".", "0", "."],
+  [".", ".", ".", ".", "."],
 ] as const;
 
 const DEMO_STEPS: DemoStep[] = [
   {
-    title: "Stars cast light in straight lines",
-    description: "A star lights its row and column until an asteroid blocks the beam.",
-    stars: [{ row: 3, col: 3 }],
+    title: "Start with a safe star",
+    description: "Place a star where it helps cover open space.",
+    stars: [{ row: 0, col: 4 }],
   },
   {
-    title: "Stars cannot see each other",
-    description: "These stars clash because they share a clear line of sight.",
+    title: "Stars light rows and columns",
+    description: "Light travels in straight lines until an asteroid blocks it.",
     stars: [
-      { row: 3, col: 3 },
-      { row: 0, col: 3 },
+      { row: 0, col: 4 },
+      { row: 4, col: 0 },
     ],
   },
   {
-    title: "Asteroids block lines of sight",
-    description: "The asteroid blocks vision, so these stars can share a column safely.",
+    title: "Respect numbered asteroids",
+    description: "The 2 asteroid needs two adjacent stars (up/right/down/left only).",
     stars: [
-      { row: 0, col: 5 },
-      { row: 2, col: 5 },
+      { row: 0, col: 4 },
+      { row: 4, col: 0 },
+      { row: 1, col: 2 },
     ],
   },
   {
-    title: "Numbered asteroids need exact neighbors",
-    description: "The 2 asteroid has exactly two adjacent stars.",
+    title: "Check all constraints",
+    description: "No star clashes, and asteroid counts stay correct.",
     stars: [
-      { row: 2, col: 2 },
-      { row: 2, col: 4 },
+      { row: 0, col: 4 },
+      { row: 4, col: 0 },
+      { row: 1, col: 2 },
+      { row: 2, col: 1 },
+    ],
+  },
+  {
+    title: "Solved example",
+    description: "All empty cells are lit and every rule is satisfied.",
+    stars: [
+      { row: 0, col: 4 },
+      { row: 1, col: 2 },
+      { row: 2, col: 1 },
+      { row: 4, col: 0 },
     ],
   },
 ];
@@ -73,13 +84,6 @@ function createDemoGrid(stars: Array<{ row: number; col: number }>): Cell[][] {
         } as Cell;
       }
 
-      if (cell === "#") {
-        return {
-          base: "asteroid",
-          state: "empty",
-        } as Cell;
-      }
-
       return {
         base: "asteroid",
         state: "empty",
@@ -91,28 +95,41 @@ function createDemoGrid(stars: Array<{ row: number; col: number }>): Cell[][] {
 
 export default function RulesDialog({ open, onClose }: RulesDialogProps) {
   const [stepIndex, setStepIndex] = useState(0);
+  const [isAutoPlay, setIsAutoPlay] = useState(true);
 
   useEffect(() => {
-    if (!open) {
+    if (!open || !isAutoPlay) {
       return;
     }
 
     const interval = setInterval(() => {
       setStepIndex((current) => (current + 1) % DEMO_STEPS.length);
-    }, 1900);
+    }, 2600);
 
     return () => clearInterval(interval);
-  }, [open]);
+  }, [open, isAutoPlay]);
 
   const currentStep = DEMO_STEPS[stepIndex];
   const demoGrid = useMemo(() => createDemoGrid(currentStep.stars), [currentStep.stars]);
   const demoEvaluation = useMemo(() => evaluateBoard(demoGrid), [demoGrid]);
+
+  const goPrev = () => {
+    setIsAutoPlay(false);
+    setStepIndex((current) => (current - 1 + DEMO_STEPS.length) % DEMO_STEPS.length);
+  };
+
+  const goNext = () => {
+    setIsAutoPlay(false);
+    setStepIndex((current) => (current + 1) % DEMO_STEPS.length);
+  };
 
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(details) => {
         if (!details.open) {
+          setStepIndex(0);
+          setIsAutoPlay(true);
           onClose();
         }
       }}
@@ -124,7 +141,7 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
         <Dialog.Content
           borderRadius="20px"
           background="white"
-          maxWidth="600px"
+          maxWidth="640px"
           width="100%"
           padding={{ base: "16px", md: "22px" }}
           boxShadow="0 24px 64px rgba(30, 22, 18, 0.4)"
@@ -135,7 +152,7 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
                 Welcome to Glimmer
               </Text>
               <Dialog.Title fontSize={{ base: "lg", md: "xl" }} fontWeight="600" color="dune.900">
-                Light the grid, obey the asteroids
+                Learn by solving a mini demo
               </Dialog.Title>
             </VStack>
           </Dialog.Header>
@@ -143,9 +160,7 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
           <Dialog.Body padding="0">
             <VStack align="stretch" gap="4">
               <VStack align="start" gap="1.5" fontSize="13px" color="dune.700">
-                <Text>1. Put stars on empty tiles to light every empty cell.</Text>
-                <Text>2. Stars cannot see each other in the same row or column.</Text>
-                <Text>3. Numbered asteroids need exactly that many adjacent stars.</Text>
+                <Text>Follow this 5-step walkthrough. It uses the exact same rules as the real game.</Text>
               </VStack>
 
               <Box
@@ -164,19 +179,17 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
                       {currentStep.description}
                     </Text>
                   </VStack>
-                  <Text fontSize="xs" color="dune.500" textTransform="uppercase" letterSpacing="0.16em">
-                    Step {stepIndex + 1}/4
-                  </Text>
+                  <VStack align="end" gap="0">
+                    <Text fontSize="xs" color="dune.500" textTransform="uppercase" letterSpacing="0.16em">
+                      Step {stepIndex + 1}/{DEMO_STEPS.length}
+                    </Text>
+                    <Text fontSize="xs" color={isAutoPlay ? "#3f7a46" : "dune.500"}>
+                      {isAutoPlay ? "Auto play" : "Manual"}
+                    </Text>
+                  </VStack>
                 </HStack>
 
-                <Box
-                  width="100%"
-                  maxWidth="420px"
-                  marginX="auto"
-                  transform="scale(0.92)"
-                  transformOrigin="center top"
-                  marginBottom="-28px"
-                >
+                <Box width="100%" maxWidth="430px" marginX="auto" marginBottom="4px">
                   <GameBoard
                     grid={demoEvaluation.grid}
                     onCellClick={() => {
@@ -185,7 +198,39 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
                   />
                 </Box>
 
-                <HStack marginTop="10px" justify="center" gap="2">
+                <HStack marginTop="10px" justify="space-between" gap="2">
+                  <HStack gap="2">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      borderRadius="999px"
+                      borderColor="dune.300"
+                      onClick={goPrev}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      borderRadius="999px"
+                      borderColor="dune.300"
+                      onClick={goNext}
+                    >
+                      Next
+                    </Button>
+                  </HStack>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    borderRadius="999px"
+                    color="dune.700"
+                    onClick={() => setIsAutoPlay((current) => !current)}
+                  >
+                    {isAutoPlay ? "Pause" : "Play"}
+                  </Button>
+                </HStack>
+
+                <HStack marginTop="8px" justify="center" gap="2">
                   {DEMO_STEPS.map((_, index) => (
                     <Box
                       key={index}
@@ -198,6 +243,11 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
                   ))}
                 </HStack>
               </Box>
+
+              <VStack align="start" gap="1" fontSize="12px" color="dune.600">
+                <Text>- Stars cannot see each other in row/column unless blocked by an asteroid.</Text>
+                <Text>- Numbered asteroids count only up/right/down/left neighbors, never diagonals.</Text>
+              </VStack>
             </VStack>
           </Dialog.Body>
 

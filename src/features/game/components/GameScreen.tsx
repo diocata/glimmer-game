@@ -1,17 +1,19 @@
 "use client";
 
-import { Box, Container, HStack, Text, VStack } from "@chakra-ui/react";
-import { useEffect, useMemo } from "react";
+import { Box, Button, Container, HStack, Text, VStack } from "@chakra-ui/react";
+import { useEffect, useMemo, useState } from "react";
 import { evaluateBoard } from "../logic";
 import { useGameStore } from "../store";
 import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
+import RulesDialog from "./RulesDialog";
 import ShareDialog from "./ShareDialog";
+
+const RULES_SEEN_STORAGE_KEY = "glimmer-rules-seen-v1";
 
 export default function GameScreen() {
   const grid = useGameStore((state) => state.grid);
   const puzzleNumber = useGameStore((state) => state.puzzleNumber);
-  const puzzleIndex = useGameStore((state) => state.puzzleIndex);
   const hasShared = useGameStore((state) => state.hasShared);
   const hintCooldown = useGameStore((state) => state.hintCooldown);
   const hintCell = useGameStore((state) => state.hintCell);
@@ -28,7 +30,9 @@ export default function GameScreen() {
   const toggleSolution = useGameStore((state) => state.toggleSolution);
   const tickTimer = useGameStore((state) => state.tickTimer);
   const stopTimer = useGameStore((state) => state.stopTimer);
+  const startTimer = useGameStore((state) => state.startTimer);
   const setDate = useGameStore((state) => state.setDate);
+  const [showRulesDialog, setShowRulesDialog] = useState(false);
 
   const evaluation = useMemo(() => evaluateBoard(grid), [grid]);
 
@@ -62,9 +66,35 @@ export default function GameScreen() {
     }
   }, [evaluation.win, isTimerRunning, stopTimer]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const hasSeenRules = window.localStorage.getItem(RULES_SEEN_STORAGE_KEY) === "1";
+    if (hasSeenRules) {
+      startTimer();
+      return;
+    }
+
+    stopTimer();
+    setShowRulesDialog(true);
+  }, [startTimer, stopTimer]);
+
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
   const formattedTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+  const handleRulesDialogClose = () => {
+    setShowRulesDialog(false);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(RULES_SEEN_STORAGE_KEY, "1");
+    }
+    if (!evaluation.win) {
+      startTimer();
+    }
+  };
+
   const handleSaveImage = async () => {
     const board = document.querySelector("[data-share-board]") as HTMLElement | null;
     if (!board) {
@@ -91,7 +121,6 @@ export default function GameScreen() {
         <VStack align="stretch" gap={{ base: "6", md: "10" }}>
           <GameControls
             puzzleNumber={puzzleNumber}
-            puzzleIndex={puzzleIndex}
             selectedDate={selectedDate}
             onDateChange={setDate}
             onReset={reset}
@@ -142,16 +171,34 @@ export default function GameScreen() {
                 borderRadius="20px"
                 boxShadow="0 18px 40px rgba(43, 32, 24, 0.12)"
               >
-                <Text fontWeight="600" fontSize="lg" marginBottom="8px">
-                  How to play
+                <Text fontWeight="600" fontSize="md" marginBottom="8px">
+                  Quick rules
                 </Text>
-                <VStack align="start" gap="3" fontSize="sm" color="dune.700">
-                  <Text>Place a star on empty tiles to cast light in straight lines.</Text>
-                  <Text>Every empty tile must be lit by at least one star.</Text>
-                  <Text>Stars may not see each other in the same row or column.</Text>
-                  <Text>Numbered asteroids require exactly that many adjacent stars.</Text>
-                  <Text>Plain asteroids block light but have no number requirement.</Text>
+                <VStack align="start" gap="3" fontSize="13px" color="dune.700">
+                  <Text>
+                    <Box as="span" fontWeight="600" color="dune.800">
+                      Goal: 
+                    </Box>
+                    Light every empty tile.
+                  </Text>
+                  <Text>
+                    Click empty tiles to cycle: <strong>empty {"->"} star {"->"} marker {"->"} empty</strong>.
+                  </Text>
+                  <Text>Stars light straight lines until an asteroid blocks the beam.</Text>
+                  <Text>Two stars cannot see each other in the same row or column.</Text>
+                  <Text>Numbered asteroids need exactly that many adjacent stars.</Text>
                 </VStack>
+                <Button
+                  marginTop="14px"
+                  variant="outline"
+                  borderRadius="999px"
+                  borderColor="dune.400"
+                  color="dune.800"
+                  _hover={{ borderColor: "dune.600", background: "dune.50" }}
+                  onClick={() => setShowRulesDialog(true)}
+                >
+                  View animated rules
+                </Button>
               </Box>
               <Box
                 background="white"
@@ -195,6 +242,7 @@ export default function GameScreen() {
         elapsedTime={formattedTime}
         onSaveImage={handleSaveImage}
       />
+      <RulesDialog open={showRulesDialog} onClose={handleRulesDialogClose} />
     </Box>
   );
 }

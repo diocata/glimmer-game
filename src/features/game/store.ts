@@ -24,6 +24,7 @@ interface GameState {
   setDate: (date: Date) => void;
   tickTimer: () => void;
   stopTimer: () => void;
+  startTimer: () => void;
 }
 
 const today = new Date();
@@ -142,4 +143,5 @@ export const useGameStore = create<GameState>((set) => ({
       return { elapsedSeconds: state.elapsedSeconds + 1 };
     }),
   stopTimer: () => set({ isTimerRunning: false }),
+  startTimer: () => set({ isTimerRunning: true }),
 }));

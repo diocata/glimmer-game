@@ -1,11 +1,12 @@
 "use client";
 
 import { Box, Button, HStack, NativeSelectField, NativeSelectRoot, Text, VStack } from "@chakra-ui/react";
-import { getDateForPuzzleIndex, PUZZLE_START_DATE, puzzles, toUtcDateString } from "../puzzles";
+import { getDateForPuzzleIndex, puzzles, toUtcDateString } from "../puzzles";
+
+const NOW_TIMESTAMP = Date.now();
 
 interface GameControlsProps {
   puzzleNumber: number;
-  puzzleIndex: number;
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   onReset: () => void;
@@ -20,7 +21,6 @@ interface GameControlsProps {
 
 export default function GameControls({
   puzzleNumber,
-  puzzleIndex,
   selectedDate,
   onDateChange,
   onReset,
@@ -48,7 +48,7 @@ export default function GameControls({
   });
   const dateValue = toUtcDateString(selectedDate);
   const lastPuzzleDate = getDateForPuzzleIndex(puzzles.length - 1);
-  const maxDate = new Date(Math.min(Date.now(), lastPuzzleDate.getTime()));
+  const maxDate = new Date(Math.min(NOW_TIMESTAMP, lastPuzzleDate.getTime()));
   const puzzleCount = puzzles.length;
   const availableDates = Array.from({ length: puzzleCount }, (_, index) => ({
     index,

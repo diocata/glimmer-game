@@ -25,6 +25,9 @@
 *.pem
 PLAN.md
 plan.md
+AGENTS.md
+CLAUDE.md
+.vscode/
 
 # debug
 npm-debug.log*

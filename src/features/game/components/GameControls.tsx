@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Button, HStack, NativeSelectField, NativeSelectRoot, Text, VStack } from "@chakra-ui/react";
-import { getDateForPuzzleIndex, puzzles, toUtcDateString } from "../puzzles";
+import { getDateForPuzzleIndex, getPuzzleDifficulty, puzzles, toUtcDateString } from "../puzzles";
 
 const NOW_TIMESTAMP = Date.now();
 
@@ -49,6 +49,7 @@ export default function GameControls({
   const dateValue = toUtcDateString(selectedDate);
   const lastPuzzleDate = getDateForPuzzleIndex(puzzles.length - 1);
   const maxDate = new Date(Math.min(NOW_TIMESTAMP, lastPuzzleDate.getTime()));
+  const puzzleDifficulty = getPuzzleDifficulty(puzzleNumber - 1);
   const puzzleCount = puzzles.length;
   const availableDates = Array.from({ length: puzzleCount }, (_, index) => ({
     index,
@@ -66,6 +67,15 @@ export default function GameControls({
           </Text>
           <Text fontSize={{ base: "2xl", md: "3xl" }} fontWeight="600">
             Daily Puzzle #{puzzleNumber}
+          </Text>
+          <Text
+            marginTop="4px"
+            fontSize="xs"
+            textTransform="uppercase"
+            letterSpacing="0.22em"
+            color={puzzleDifficulty === "easy" ? "#3f7a46" : "dune.600"}
+          >
+            {puzzleDifficulty}
           </Text>
           <HStack gap="2" marginTop="6px" flexWrap="wrap">
             <Text fontSize="xs" color="dune.600">

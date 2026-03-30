@@ -3,6 +3,7 @@
 import { Box, Button, Container, HStack, Text, VStack } from "@chakra-ui/react";
 import { useEffect, useMemo, useState } from "react";
 import { evaluateBoard } from "../logic";
+import { getPuzzleDifficulty } from "../puzzles";
 import { useGameStore } from "../store";
 import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
@@ -14,6 +15,7 @@ const RULES_SEEN_STORAGE_KEY = "glimmer-rules-seen-v1";
 export default function GameScreen() {
   const grid = useGameStore((state) => state.grid);
   const puzzleNumber = useGameStore((state) => state.puzzleNumber);
+  const puzzleIndex = useGameStore((state) => state.puzzleIndex);
   const hasShared = useGameStore((state) => state.hasShared);
   const hintCooldown = useGameStore((state) => state.hintCooldown);
   const hintCell = useGameStore((state) => state.hintCell);
@@ -35,6 +37,28 @@ export default function GameScreen() {
   const [showRulesDialog, setShowRulesDialog] = useState(false);
 
   const evaluation = useMemo(() => evaluateBoard(grid), [grid]);
+  const puzzleDifficulty = getPuzzleDifficulty(puzzleIndex);
+  const difficultyBadge =
+    puzzleDifficulty === "easy"
+      ? {
+          label: "easy",
+          color: "#2f7a3f",
+          background: "#e9f8ec",
+          borderColor: "#add8b6",
+        }
+      : puzzleDifficulty === "medium"
+      ? {
+          label: "medium",
+          color: "#8b6a00",
+          background: "#fff4c9",
+          borderColor: "#e2c86f",
+        }
+      : {
+          label: "hard",
+          color: "#b4232d",
+          background: "#ffe3e7",
+          borderColor: "#f0a8b0",
+        };
 
   useEffect(() => {
     if (hintCooldown <= 0) {
@@ -138,6 +162,27 @@ export default function GameScreen() {
               minWidth={{ base: "100%", md: "360px" }}
               maxWidth={{ base: "100%", lg: "520px" }}
             >
+              <HStack justify="center" marginBottom="10px">
+                <Box
+                  paddingX="12px"
+                  paddingY="4px"
+                  borderRadius="999px"
+                  borderWidth="1px"
+                  borderStyle="solid"
+                  borderColor={difficultyBadge.borderColor}
+                  background={difficultyBadge.background}
+                >
+                  <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    letterSpacing="0.14em"
+                    textTransform="uppercase"
+                    color={difficultyBadge.color}
+                  >
+                    {difficultyBadge.label}
+                  </Text>
+                </Box>
+              </HStack>
               <Box position="relative" data-share-board>
                 <Box
                   position="absolute"

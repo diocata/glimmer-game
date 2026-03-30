@@ -8,6 +8,8 @@ export interface PuzzleDefinition {
   solution: boolean[][];
 }
 
+export type PuzzleDifficulty = "easy" | "medium";
+
 export const puzzles: PuzzleDefinition[] = [
   {"level":[[".","1",".",".",".",".","."],["1",".",".",".","2",".","1"],[".",".",".",".",".",".","."],[".",".",".",".","2",".","0"],["2","0",".",".",".","1","."],[".","2",".","0","2",".","."],["#",".","1","#",".",".","."]],"solution":[[true,false,false,true,false,false,false],[false,false,true,false,false,true,false],[false,false,false,false,true,false,false],[true,false,false,false,false,false,false],[false,false,false,false,true,false,false],[true,false,false,false,false,false,true],[false,true,false,false,true,false,false]]},
   {"level":[["0","#",".",".","0",".","."],[".",".",".",".","3",".","."],[".",".",".","2",".",".","0"],[".",".",".",".","1","0","."],["1","0",".",".",".","1","."],["1","1",".",".",".",".","."],[".",".",".",".",".",".","."]],"solution":[[false,false,false,false,false,false,true],[false,false,false,true,false,true,false],[false,true,false,false,true,false,false],[true,false,false,false,false,false,false],[false,false,false,true,false,false,true],[false,false,true,false,false,false,false],[true,false,false,false,false,false,false]]},
@@ -40,6 +42,10 @@ export const puzzles: PuzzleDefinition[] = [
   {"level":[[".",".",".",".","1",".","."],[".",".",".",".",".",".","."],[".",".","1",".",".",".","."],[".",".",".",".","1",".","."],[".","1",".",".",".",".","."],[".",".",".",".","1",".","."],[".",".","1",".",".",".","1"]],"solution":[[true,false,false,false,false,false,true],[false,false,true,false,false,true,false],[false,true,false,false,true,false,false],[false,false,false,true,false,false,true],[false,true,false,false,true,false,false],[true,false,false,false,false,false,false],[false,false,true,false,true,false,false]]},
   {"level":[[".",".","1",".",".",".","0"],[".",".",".","0",".","1","."],[".",".",".",".",".",".","."],[".","1",".",".",".",".","."],["1",".",".",".",".",".","."],[".",".",".","1",".",".","."],[".",".",".",".","1",".","."]],"solution":[[false,false,true,false,false,false,false],[true,false,false,false,false,false,true],[false,false,false,true,false,false,false],[false,true,false,false,false,false,false],[false,false,false,true,false,false,false],[true,false,false,false,false,false,false],[false,false,false,false,true,false,true]]}
 ];
+
+export function getPuzzleDifficulty(index: number): PuzzleDifficulty {
+  return index < 15 ? "easy" : "medium";
+}
 
 export function toUtcDateString(date: Date) {
   const utc = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));

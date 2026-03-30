@@ -19,53 +19,54 @@ interface DemoStep {
 
 const DEMO_LAYOUT = [
   [".", ".", ".", ".", "."],
-  [".", "2", ".", "1", "."],
-  [".", ".", ".", ".", "."],
   [".", "1", ".", "0", "."],
+  [".", ".", ".", ".", "."],
+  [".", "0", ".", "1", "."],
   [".", ".", ".", ".", "."],
 ] as const;
 
 const DEMO_STEPS: DemoStep[] = [
   {
-    title: "Start with a safe star",
-    description: "Place a star where it helps cover open space.",
-    stars: [{ row: 0, col: 4 }],
+    title: "One per row and column",
+    description: "Start by placing a star in a row and column that are still empty.",
+    stars: [{ row: 0, col: 2 }],
   },
   {
-    title: "Stars light rows and columns",
-    description: "Light travels in straight lines until an asteroid blocks it.",
+    title: "Stars cannot touch",
+    description: "Stars cannot be adjacent, including diagonally.",
     stars: [
-      { row: 0, col: 4 },
-      { row: 4, col: 0 },
+      { row: 0, col: 2 },
+      { row: 1, col: 2 },
+    ],
+  },
+  {
+    title: "Spread stars safely",
+    description: "Keep each star isolated while filling new rows and columns.",
+    stars: [
+      { row: 0, col: 2 },
+      { row: 2, col: 3 },
+      { row: 3, col: 0 },
     ],
   },
   {
     title: "Respect numbered asteroids",
-    description: "The 2 asteroid needs two adjacent stars (up/right/down/left only).",
+    description: "Numbers count adjacent stars in up/right/down/left only.",
     stars: [
-      { row: 0, col: 4 },
-      { row: 4, col: 0 },
-      { row: 1, col: 2 },
-    ],
-  },
-  {
-    title: "Check all constraints",
-    description: "No star clashes, and asteroid counts stay correct.",
-    stars: [
-      { row: 0, col: 4 },
-      { row: 4, col: 0 },
-      { row: 1, col: 2 },
-      { row: 2, col: 1 },
+      { row: 0, col: 2 },
+      { row: 2, col: 4 },
+      { row: 3, col: 0 },
+      { row: 4, col: 3 },
     ],
   },
   {
     title: "Solved example",
-    description: "All empty cells are lit and every rule is satisfied.",
+    description: "Every row/column has one star, no touching, clues satisfied.",
     stars: [
-      { row: 0, col: 4 },
-      { row: 1, col: 2 },
-      { row: 2, col: 1 },
-      { row: 4, col: 0 },
+      { row: 0, col: 2 },
+      { row: 1, col: 0 },
+      { row: 2, col: 4 },
+      { row: 3, col: 1 },
+      { row: 4, col: 3 },
     ],
   },
 ];
@@ -152,7 +153,7 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
                 Welcome to Glimmer
               </Text>
               <Dialog.Title fontSize={{ base: "lg", md: "xl" }} fontWeight="600" color="dune.900">
-                Learn by solving a mini demo
+                Learn Astro Queens in 5 steps
               </Dialog.Title>
             </VStack>
           </Dialog.Header>
@@ -160,7 +161,7 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
           <Dialog.Body padding="0">
             <VStack align="stretch" gap="4">
               <VStack align="start" gap="1.5" fontSize="13px" color="dune.700">
-                <Text>Follow this 5-step walkthrough. It uses the exact same rules as the real game.</Text>
+                <Text>Same board, new core: one star per row and column, with no touching.</Text>
               </VStack>
 
               <Box
@@ -245,8 +246,9 @@ export default function RulesDialog({ open, onClose }: RulesDialogProps) {
               </Box>
 
               <VStack align="start" gap="1" fontSize="12px" color="dune.600">
-                <Text>- Stars cannot see each other in row/column unless blocked by an asteroid.</Text>
-                <Text>- Numbered asteroids count only up/right/down/left neighbors, never diagonals.</Text>
+                <Text>- Exactly one star per row and per column.</Text>
+                <Text>- Touching includes diagonal neighbors.</Text>
+                <Text>- Numbered asteroids count only up/right/down/left neighbors.</Text>
               </VStack>
             </VStack>
           </Dialog.Body>

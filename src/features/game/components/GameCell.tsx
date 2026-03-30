@@ -31,13 +31,13 @@ export default function GameCell({
     solutionStar &&
     cell.base === "empty" &&
     cell.state !== "star";
-  const showGlow = cell.illuminated && cell.base === "empty";
+  const showGlow = isStar;
   const hasConflict = cell.conflict;
 
   const background = isAsteroid
     ? "#2b2018"
     : showGlow
-    ? "linear-gradient(135deg, rgba(255,210,148,0.6), rgba(255,154,72,0.25))"
+    ? "linear-gradient(135deg, rgba(255,210,148,0.32), rgba(255,154,72,0.16))"
     : "rgba(255,255,255,0.7)";
 
   const borderColor = hasConflict ? "#ff5c1f" : isHint ? "#ffb347" : "#d9cbbc";

@@ -19,11 +19,20 @@ export interface ConstraintViolation {
   actual: number;
 }
 
+export interface LineViolation {
+  index: number;
+  expected: number;
+  actual: number;
+}
+
 export interface EvaluationResult {
   grid: EvaluatedCell[][];
   allLit: boolean;
   hasConflicts: boolean;
+  hasTouchConflicts: boolean;
   constraintViolations: ConstraintViolation[];
+  rowViolations: LineViolation[];
+  colViolations: LineViolation[];
   win: boolean;
 }
 

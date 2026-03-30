@@ -16,7 +16,7 @@ const dmMono = DM_Mono({
 
 export const metadata: Metadata = {
   title: "Glimmer",
-  description: "Daily light-up logic puzzle",
+  description: "Daily Astro Queens logic puzzle",
   icons: {
     icon: "/favicon.svg",
   },

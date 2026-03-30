@@ -11,8 +11,8 @@ import GameControls from "./GameControls";
 import RulesDialog from "./RulesDialog";
 import ShareDialog from "./ShareDialog";
 
-const RULES_SEEN_STORAGE_KEY = "glimmer-rules-seen-v1";
-const PROGRESS_STORAGE_KEY = "glimmer-progress-v1";
+const RULES_SEEN_STORAGE_KEY = "glimmer-rules-seen-v2";
+const PROGRESS_STORAGE_KEY = "glimmer-progress-v2";
 
 interface SavedProgress {
   grid: Cell[][];
@@ -270,8 +270,9 @@ export default function GameScreen() {
             showSolution={showSolution}
             hintCooldown={hintCooldown}
             solutionCooldown={solutionCooldown}
-            allLit={evaluation.allLit}
-            hasConflicts={evaluation.hasConflicts}
+            rowIssues={evaluation.rowViolations.length}
+            colIssues={evaluation.colViolations.length}
+            hasTouchConflicts={evaluation.hasTouchConflicts}
             constraintIssues={evaluation.constraintViolations.length}
           />
           <HStack align="start" gap={{ base: "8", lg: "12" }} flexWrap="wrap">
@@ -342,17 +343,17 @@ export default function GameScreen() {
                     <Box as="span" fontWeight="600" color="dune.800">
                       Goal:{" "}
                     </Box>
-                    Light every empty tile.
+                    Place exactly one star in every row and every column.
                   </Text>
                   <Text>
                     Click empty tiles to cycle: <strong>empty {"->"} star {"->"} marker {"->"} empty</strong>.
                   </Text>
-                  <Text>Stars light straight lines until an asteroid blocks the beam.</Text>
-                  <Text>Two stars cannot see each other in the same row or column.</Text>
+                  <Text>Stars cannot touch each other, including diagonally.</Text>
                   <Text>
                     Numbered asteroids need exactly that many adjacent stars
                     (up/right/down/left only, no diagonals).
                   </Text>
+                  <Text>Plain asteroids are blocked cells.</Text>
                 </VStack>
                 <Button
                   marginTop="14px"
@@ -376,13 +377,13 @@ export default function GameScreen() {
                   Status
                 </Text>
                 <Text fontSize="sm" color="dune.700">
-                  {evaluation.hasConflicts
-                    ? "Stars are in line of sight. Move one to break the clash."
+                  {evaluation.hasTouchConflicts
+                    ? "Some stars are touching. Separate them (diagonals also count)."
+                    : evaluation.rowViolations.length > 0 || evaluation.colViolations.length > 0
+                    ? `Rows left: ${evaluation.rowViolations.length}, columns left: ${evaluation.colViolations.length}.`
                     : evaluation.constraintViolations.length > 0
                     ? "Some numbered asteroids have the wrong star count."
-                    : evaluation.allLit
-                    ? "All tiles are lit. Now satisfy every numbered asteroid."
-                    : "Keep placing stars until all empty tiles are lit."}
+                    : "Perfect setup. Rules satisfied."}
                 </Text>
                 <HStack marginTop="12px" gap="3" flexWrap="wrap">
                   <Text fontSize="xs" color="dune.600" textTransform="uppercase" letterSpacing="0.3em">

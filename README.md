@@ -1,39 +1,44 @@
 # Glimmer
 
-Glimmer is a daily, space-themed logic puzzle inspired by Akari.
-Place stars, light the board, and solve as fast as you can.
+Glimmer is a daily space-themed logic game built around a new variant we call **Astro Queens**.
+It keeps the familiar board feel, but the core objective is different from classic light-beam games.
 
-## What Players Can Expect
+## The Game in 20 Seconds
 
-- A new puzzle each day.
-- A clean timer-based score (lower is better).
-- A guided first-time tutorial.
-- A gentle difficulty ramp: easy first, then medium.
+- Place stars on empty tiles.
+- You need **exactly one star in every row**.
+- You need **exactly one star in every column**.
+- Stars **cannot touch**, including diagonal neighbors.
+- Numbered asteroids require that many adjacent stars (**up/right/down/left only**).
+- Plain asteroids are blocked cells.
 
-## Rules (Same for Every Puzzle)
+If all rules are satisfied at the same time, you win.
 
-1. Place stars on empty tiles.
-2. Stars cast light in straight lines (up, right, down, left) until blocked by an asteroid.
-3. Every empty tile must be lit.
-4. Two stars cannot see each other in the same row or column.
-5. Numbered asteroids require exactly that many adjacent stars (up/right/down/left only, never diagonal).
-6. Plain asteroids block light but do not require adjacent stars.
+## Why It Feels Different
 
-## Difficulty and Puzzle Sizes
+Astro Queens mixes quick row/column logic with local adjacency clues:
+
+- global structure: one-per-row + one-per-column
+- local constraints: numbered asteroid neighbors
+- spatial pressure: stars cannot touch
+
+This makes puzzles fast to read, but still satisfying to solve.
+
+## Difficulty and Board Sizes
 
 - Puzzles `#1`-`#15`: `easy` (`5x5`)
 - Puzzles `#16+`: `medium` (`7x7`)
 
 ## Built-In Helpers
 
-- `Hint` is available immediately and has a `20s` cooldown.
+- `Hint` is available immediately with a `20s` cooldown.
 - `Show Solution` unlocks after `60s` of active timer.
-- Progress auto-saves in your browser per puzzle/date.
-- You can replay previous dates anytime.
+- Progress auto-saves per puzzle in local storage.
+- You can revisit previous puzzle dates.
 
-## Want to Contribute?
+## Contributing
 
-Absolutely. Contributions are welcome.
+Contributions are welcome.
 
 ### Local Setup
 
@@ -42,9 +47,9 @@ npm install
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open `http://localhost:3000`.
 
-### Useful Commands
+### Commands
 
 ```bash
 npm run dev
@@ -53,12 +58,8 @@ npm run build
 npm run start
 ```
 
-### Contribution Notes
+### Notes for Contributors
 
-- Keep gameplay rules consistent unless a rule change is explicitly intended.
-- For UI changes, include before/after screenshots in your PR when possible.
+- Keep Astro Queens rules consistent across gameplay, tutorial, and README.
+- If you change puzzle logic, update tutorial and in-game rules copy in the same PR.
 - Run `npm run lint` and `npm run build` before opening a PR.
-
----
-
-Made with care for puzzle lovers.

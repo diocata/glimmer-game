@@ -5,12 +5,23 @@ import type {
   LevelDefinition,
 } from "./types";
 
-const directions = [
+const cardinalDirections = [
   [1, 0],
   [-1, 0],
   [0, 1],
   [0, -1],
-];
+] as const;
+
+const touchingDirections = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [1, 1],
+  [1, -1],
+  [-1, 1],
+  [-1, -1],
+] as const;
 
 export function createGridFromLevel(level: LevelDefinition): Cell[][] {
   return level.map((row) =>
@@ -67,48 +78,40 @@ export function updateCellState(
 
 export function evaluateBoard(grid: Cell[][]): EvaluationResult {
   const size = grid.length;
-  const illuminatedMap = grid.map((row) => row.map(() => false));
   const conflictMap = grid.map((row) => row.map(() => false));
   const constraintViolations: EvaluationResult["constraintViolations"] = [];
+  const rowCounts = new Array(size).fill(0);
+  const colCounts = new Array(size).fill(0);
 
   const inBounds = (row: number, col: number) =>
     row >= 0 && col >= 0 && row < size && col < grid[row].length;
 
-  const markIlluminated = (row: number, col: number) => {
-    if (inBounds(row, col)) {
-      illuminatedMap[row][col] = true;
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < grid[row].length; col += 1) {
+      if (grid[row][col].state === "star") {
+        rowCounts[row] += 1;
+        colCounts[col] += 1;
+      }
     }
-  };
+  }
 
   for (let row = 0; row < size; row += 1) {
     for (let col = 0; col < grid[row].length; col += 1) {
-      const cell = grid[row][col];
-      if (cell.state !== "star") {
+      if (grid[row][col].state !== "star") {
         continue;
       }
 
-      markIlluminated(row, col);
+      for (const [rowStep, colStep] of touchingDirections) {
+        const nextRow = row + rowStep;
+        const nextCol = col + colStep;
 
-      for (const [rowStep, colStep] of directions) {
-        let nextRow = row + rowStep;
-        let nextCol = col + colStep;
+        if (!inBounds(nextRow, nextCol)) {
+          continue;
+        }
 
-        while (inBounds(nextRow, nextCol)) {
-          const nextCell = grid[nextRow][nextCol];
-          if (nextCell.base === "asteroid") {
-            break;
-          }
-
-          markIlluminated(nextRow, nextCol);
-
-          if (nextCell.state === "star") {
-            conflictMap[row][col] = true;
-            conflictMap[nextRow][nextCol] = true;
-            break;
-          }
-
-          nextRow += rowStep;
-          nextCol += colStep;
+        if (grid[nextRow][nextCol].state === "star") {
+          conflictMap[row][col] = true;
+          conflictMap[nextRow][nextCol] = true;
         }
       }
     }
@@ -122,7 +125,7 @@ export function evaluateBoard(grid: Cell[][]): EvaluationResult {
       }
 
       let count = 0;
-      for (const [rowStep, colStep] of directions) {
+      for (const [rowStep, colStep] of cardinalDirections) {
         const nextRow = row + rowStep;
         const nextCol = col + colStep;
         if (inBounds(nextRow, nextCol) && grid[nextRow][nextCol].state === "star") {
@@ -141,37 +144,46 @@ export function evaluateBoard(grid: Cell[][]): EvaluationResult {
     }
   }
 
-  let allLit = true;
-  let hasConflicts = false;
+  const rowViolations = rowCounts
+    .map((count, index) => ({ index, expected: 1, actual: count }))
+    .filter((line) => line.actual !== line.expected);
+  const colViolations = colCounts
+    .map((count, index) => ({ index, expected: 1, actual: count }))
+    .filter((line) => line.actual !== line.expected);
+
+  let hasTouchConflicts = false;
 
   const evaluatedGrid = grid.map((row, rowIndex) =>
     row.map((cell, colIndex) => {
-      const illuminated = cell.base === "empty" ? illuminatedMap[rowIndex][colIndex] : false;
       const conflict = conflictMap[rowIndex][colIndex];
-
-      if (cell.base === "empty" && !illuminated) {
-        allLit = false;
-      }
-
       if (conflict) {
-        hasConflicts = true;
+        hasTouchConflicts = true;
       }
 
       return {
         ...cell,
-        illuminated,
+        illuminated: false,
         conflict,
       };
     })
   );
 
-  const win = allLit && !hasConflicts && constraintViolations.length === 0;
+  const allLit = rowViolations.length === 0 && colViolations.length === 0;
+  const hasConflicts = hasTouchConflicts;
+  const win =
+    rowViolations.length === 0 &&
+    colViolations.length === 0 &&
+    !hasTouchConflicts &&
+    constraintViolations.length === 0;
 
   return {
     grid: evaluatedGrid,
     allLit,
     hasConflicts,
+    hasTouchConflicts,
     constraintViolations,
+    rowViolations,
+    colViolations,
     win,
   };
 }

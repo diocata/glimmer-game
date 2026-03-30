@@ -15,8 +15,9 @@ interface GameControlsProps {
   showSolution: boolean;
   hintCooldown: number;
   solutionCooldown: number;
-  allLit: boolean;
-  hasConflicts: boolean;
+  rowIssues: number;
+  colIssues: number;
+  hasTouchConflicts: boolean;
   constraintIssues: number;
 }
 
@@ -30,17 +31,18 @@ export default function GameControls({
   showSolution,
   hintCooldown,
   solutionCooldown,
-  allLit,
-  hasConflicts,
+  rowIssues,
+  colIssues,
+  hasTouchConflicts,
   constraintIssues,
 }: GameControlsProps) {
-  const status = hasConflicts
-    ? "Stars are clashing"
+  const status = hasTouchConflicts
+    ? "Some stars are touching"
+    : rowIssues > 0 || colIssues > 0
+    ? "Place exactly one star in each row and each column"
     : constraintIssues > 0
     ? "Asteroids need attention"
-    : allLit
-    ? "All space is illuminated"
-    : "Light up every empty cell";
+    : "All row, column, and asteroid rules are satisfied";
 
   const hintProgress = ((20 - hintCooldown) / 20) * 100;
   const hintLoadingText = `${hintCooldown}s`;
